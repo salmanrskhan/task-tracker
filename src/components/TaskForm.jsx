@@ -104,6 +104,7 @@ const TaskForm = ({ addTask, editingTask, updateTask }) => {
         : "bg-blue-600 hover:bg-blue-700"
     }`}
         disabled={!title.trim()}
+        title={!title.trim() ? "Enter a title first" : ""}
       >
         {editingTask ? "Update Task" : "Add Task"}
       </button>
