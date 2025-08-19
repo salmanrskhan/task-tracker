@@ -68,7 +68,7 @@ const QuoteCard = () => {
         — {author}
       </p>
       <p className="text-[10px] sm:text-xs text-gray-500 mt-2 italic">
-        🔁 New quote appears daily at midnight (00:00)
+        🔁 Quote auto-refreshes at 00:00
       </p>
     </div>
   );

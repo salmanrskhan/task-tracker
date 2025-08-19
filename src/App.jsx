@@ -43,7 +43,10 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
+     if (!isSorted) {
+      originalTasksRef.current = tasks;
+    }
+  }, [tasks,isSorted]);
 
   const addTask = (task) => {
     setTasks((prev) => {
@@ -108,6 +111,15 @@ function App() {
     }
   };
 
+  const clearCompleted = () => {
+  setTasks((prev) => {
+    const updated = prev.filter((task) => !task.completed);
+    originalTasksRef.current = updated;  // ✅ keep ref in sync
+    return updated;
+  });
+  toast("Cleared completed tasks 🧹", { icon: "🧼" });
+};
+
   const completedCount = tasks.filter((task) => task.completed).length;
   const totalCount = tasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -162,30 +174,40 @@ function App() {
   };
 
   const sortByDeadline = () => {
-    if (!isSorted) {
-      const now = new Date();
-      const sorted = [...tasks].sort((a, b) => {
-        if (!a.deadline && !b.deadline) return 0;
-        if (!a.deadline) return 1;
-        if (!b.deadline) return -1;
+  if (!isSorted) {
+    const now = new Date();
+    const sorted = [...tasks].sort((a, b) => {
+      // ✅ 1. Completed tasks always last
+      if (a.completed && !b.completed) return 1;
+      if (b.completed && !a.completed) return -1;
 
-        const remainingA = new Date(a.deadline) - now;
-        const remainingB = new Date(b.deadline) - now;
+      // ✅ 2. Both completed → keep same order
+      if (a.completed && b.completed) return 0;
 
-        // Expired tasks always last
-        if (remainingA < 0 && remainingB >= 0) return 1;
-        if (remainingB < 0 && remainingA >= 0) return -1;
+      // ✅ 3. Handle deadline cases
+      if (!a.deadline && b.deadline) return 1;   // tasks w/o deadline go later
+      if (!b.deadline && a.deadline) return -1;
+      if (!a.deadline && !b.deadline) return 0;
 
-        return remainingA - remainingB;
-      });
-      setTasks(sorted);
-      setIsSorted(true);
-    } else {
-      // Reset to original order
-      setTasks(originalTasksRef.current);
-      setIsSorted(false);
-    }
-  };
+      const remainingA = new Date(a.deadline) - now;
+      const remainingB = new Date(b.deadline) - now;
+
+      // ✅ 4. Expired tasks always last (but before completed)
+      if (remainingA < 0 && remainingB >= 0) return 1;
+      if (remainingB < 0 && remainingA >= 0) return -1;
+
+      return remainingA - remainingB; // closest deadline first
+    });
+
+    setTasks(sorted);
+    setIsSorted(true);
+  } else {
+    // Reset to original order
+    setTasks(originalTasksRef.current);
+    setIsSorted(false);
+  }
+};
+
 
   const handleMove = (taskId, direction) => {
     setTasks((prevTasks) => {
@@ -261,9 +283,7 @@ function App() {
                 </label>
 
                 <button
-                  onClick={() =>
-                    setTasks((prev) => prev.filter((task) => !task.completed))
-                  }
+                  onClick={clearCompleted}
                   className="text-red-600 hover:underline"
                 >
                   Clear Completed 🧹
